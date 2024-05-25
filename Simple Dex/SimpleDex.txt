@@ -1,0 +1,129 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./TokenA.sol";
+import "./TokenB.sol";
+
+contract SimpleDEX {
+    address public owner;
+    IERC20 public tokenA;
+    address public ownerA;
+    IERC20 public tokenB;
+    address public ownerB;
+    uint public exchangeRate;
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can call this function");
+        _;
+    }
+
+    constructor(address _tokenA, address _ownerA, address _tokenB, address _ownerB, uint _exchangeRate) {
+        // Owner of the SimpleDex
+        owner = msg.sender;
+        tokenA = IERC20(_tokenA);
+        // Owner address of the tokenA
+        ownerA = _ownerA;
+        tokenB = IERC20(_tokenB);
+        // Owner address of the tokenB
+        ownerB = _ownerB;
+        exchangeRate = _exchangeRate;
+    }
+
+    function setExchangeRate(uint _newRate) public onlyOwner {
+        exchangeRate = _newRate;
+    }
+
+    function exchangeTokenAForTokenB(uint amountA) public onlyOwner {
+        uint amountB = amountA * exchangeRate;
+        // Checking amount of tokenB in SimpleDex
+        require(tokenB.balanceOf(address(this)) >= amountB, "Not enough TokenB in the dex");
+        // Transfer tokenA == amountA from ownerA to SimpleDex
+        require(safeTransferFrom(tokenA, ownerA, amountA), "TokenA transfer failed");
+        // Transfer tokenB == amountB from SimpleDex to ownerB
+        require(safeTransfer(tokenB, ownerA, amountB), "TokenB transfer failed");
+    }
+
+    function exchangeTokenBForTokenA(uint amountB) public onlyOwner {
+        uint amountA = amountB / exchangeRate;
+        // Checking amount of tokenA in SimpleDex
+        require(tokenA.balanceOf(address(this)) >= amountA, "Not enough TokenA in dex");
+        // Transfer tokenB == amountB from ownerB to SimpleDex
+        require(safeTransferFrom(tokenB, ownerB, amountB), "TokenB transfer failed");
+        // Transfer tokenA == amountA from SimpleDex to ownerA
+        require(safeTransfer(tokenA, ownerB, amountA), "TokenA transfer failed");
+    }
+
+    // Helper Functions
+    function safeTransferFrom(IERC20 token, address from, uint amount) internal returns (bool) {
+        bool sent = token.transferFrom(from, address(this), amount);
+        return sent;
+    }
+
+    function safeTransfer(IERC20 token, address to, uint amount) internal returns (bool) {
+        bool sent = token.transfer(to, amount);
+        return sent;
+    }
+}
+
+
+
+   /* interface IERC20 {
+    function totalSupply() external view returns (uint256);
+    function balanceOf(address account) external view returns (uint256);
+    function transfer(address recipient, uint256 amount)
+        external
+        returns (bool);
+    function allowance(address owner, address spender)
+        external
+        view
+        returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
+    function transferFrom(address sender, address recipient, uint256 amount)
+        external
+        returns (bool);
+}*/
+
+/*
+Created two ERC20 tokenA and tokenB which are minting 100 tokens to the contract deployer
+tokena address--"0x7874d94b8f9E2a28FCceCE404666C984f33a82b8"
+ownera address--"0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"
+tokenb address --"0xd4662c4530c9cB1d194Cc2e8c11A13413148Fc6F"
+ownerb address --"0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2"
+simpledexowner address --"0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db"
+dexaddress--"0x00648CA25a2E54b636c22cd5e1dF72DA69570AA2"
+totalsupply--"100000000000000000000"
+Set the exchange rate function to take exchangerate from the SimpleDex contract Deployer
+
+1st functionexchangetokenafortokenb--
+exchange rate=2
+let 1 tokena = 2 tokenb
+intially tokena and tokenb in the dex are 50 and ownera has 50 tokena
+and ownera want to trade 10 tokena for 20 tokenb according to the exchange rate
+so ownera approve the dex to transfer 10 tokena from ownera and transfer it into the dex
+now after calculation 10 tokena = 20 tokensb
+so after transferring 10 tokena from ownera to dex address
+dex transfer 20 tokenb from dex to ownera address
+after transaction ownera has 40 tokena and 20 tokenb 
+dex has 60 tokena and 30 tokenb
+
+2nd functionexchangetokenbfortokena--
+
+tokena address--"0xc2955A581b9481B8e56374dBf78adDA30D7dEc11"
+ownera address--"0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"
+tokenb address --"0x2aC7cf159e47D13b954dCc67E669bd86CFb75F3c"
+ownerb address --"0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2"
+simpledexowner address --"0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db"
+dexaddress--"0xBbaD3E78a1f20240188F60A8b925D66e5398c898"
+totalsupply--"100000000000000000000"
+exchange rate =2
+1 tokena = 2 tokenb
+intially tokena and tokenb in the dex are 50 and ownerb has 50 tokenb
+and ownerb want to trade 10 tokenb for 5 tokena according to the exchange rate
+so ownerb approve the dex to transfer 10 tokenb from ownerb to dex
+after the transaction dex transfer 5 tokena from simpledex contract to ownerb address
+after the transaction ownerb is left with 40 tokenb and 5 tokena 
+and dex is left with 45 tokena and 60 tokenb
+
+
+*/
